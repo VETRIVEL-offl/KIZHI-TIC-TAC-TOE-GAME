@@ -33,33 +33,21 @@ h1 { margin: 20px 0; }
     transition: background 0.3s, transform 0.2s;
     border-radius: 10px;
 }
-.cell:hover {
-    transform: scale(1.1);
-}
-button, select {
-    margin: 5px;
-    padding: 10px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-}
+.cell:hover { transform: scale(1.1); }
+button, select { margin: 5px; padding: 10px; font-size: 16px; cursor: pointer; border-radius: 5px; }
 #popup {
-    position: fixed;
-    top:0; left:0;
-    width:100%; height:100%;
+    position: fixed; top:0; left:0; width:100%; height:100%;
     display:flex; justify-content:center; align-items:center;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    font-size: 48px;
-    font-weight: bold;
-    display:none;
-    z-index: 10;
-    animation: popupAnim 0.5s ease-out;
+    background: rgba(0,0,0,0.7); color:white; font-size:48px; font-weight:bold;
+    display:none; z-index:10; animation: popupAnim 0.5s ease-out;
 }
 @keyframes popupAnim {
     0% { transform: scale(0); opacity:0; }
     50% { transform: scale(1.2); opacity:1; }
     100% { transform: scale(1); opacity:1; }
+}
+#confetti-canvas {
+    position: fixed; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 20;
 }
 </style>
 </head>
@@ -85,11 +73,13 @@ button, select {
 <h2 id="score">Player 1: 0 | Player 2 / AI: 0</h2>
 
 <div id="popup"></div>
+<canvas id="confetti-canvas"></canvas>
 
 <audio id="move-sound" src="move.mp3"></audio>
 <audio id="win-sound" src="win.mp3"></audio>
 
 <script>
+// ----------------- Game Variables -----------------
 let board = Array(9).fill('');
 let currentPlayer = 'X';
 let vsAI = true;
@@ -102,52 +92,52 @@ const boardDiv = document.getElementById('board');
 const popupDiv = document.getElementById('popup');
 const scoreDiv = document.getElementById('score');
 
+// ----------------- Board Rendering -----------------
 function renderBoard() {
     boardDiv.innerHTML = '';
-    board.forEach((cell, i) => {
+    board.forEach((cell,i)=>{
         const div = document.createElement('div');
-        div.className = 'cell';
+        div.className='cell';
         div.style.backgroundColor = colors[i];
         div.textContent = cell;
-
-        // Hover animation
-        div.onmouseenter = () => div.style.backgroundColor = '#FFFF00';
-        div.onmouseleave = () => div.style.backgroundColor = colors[i];
-
-        div.onclick = () => playerMove(i);
+        div.onmouseenter = ()=> div.style.backgroundColor='#FFFF00';
+        div.onmouseleave = ()=> div.style.backgroundColor=colors[i];
+        div.onclick = ()=>playerMove(i);
         boardDiv.appendChild(div);
     });
 }
 renderBoard();
 
-function playSound(id) {
-    const audio = document.getElementById(id);
-    audio.currentTime = 0;
-    audio.play();
+// ----------------- Sounds -----------------
+function playSound(id){
+    const audio=document.getElementById(id);
+    audio.currentTime=0; audio.play();
 }
 
-function showPopup(message) {
-    popupDiv.textContent = message;
-    popupDiv.style.display = 'flex';
-    setTimeout(()=> popupDiv.style.display='none', 1500);
+// ----------------- Popup -----------------
+function showPopup(message){
+    popupDiv.textContent=message;
+    popupDiv.style.display='flex';
+    setTimeout(()=> popupDiv.style.display='none',1500);
 }
 
-function playerMove(i) {
-    if(board[i] !== '') return;
-    board[i] = currentPlayer;
+// ----------------- Player Move -----------------
+function playerMove(i){
+    if(board[i]!=='') return;
+    board[i]=currentPlayer;
     playSound('move-sound');
     animateCell(i);
     updateBoard();
-    if(checkWinner(currentPlayer)) { 
-        playSound('win-sound'); 
-        score[currentPlayer]++; updateScore(); 
-        showPopup(`${currentPlayer} Wins!`); 
-        setTimeout(resetGame,1500); 
-        return; 
+    if(checkWinner(currentPlayer)){
+        playSound('win-sound');
+        score[currentPlayer]++; updateScore();
+        showPopup(`${currentPlayer} Wins!`);
+        startConfetti(); setTimeout(resetGame,2000);
+        return;
     }
-    if(!board.includes('')) { showPopup('Draw!'); setTimeout(resetGame,1500); return; }
+    if(!board.includes('')){ showPopup('Draw!'); setTimeout(resetGame,2000); return; }
 
-    if(vsAI && currentPlayer==='X') {
+    if(vsAI && currentPlayer==='X'){
         currentPlayer='O';
         document.getElementById('turn').textContent='Turn: AI (O)';
         setTimeout(aiMove,500);
@@ -157,33 +147,46 @@ function playerMove(i) {
     }
 }
 
-function aiMove() {
-    let idx = getAIMove();
+// ----------------- AI Move -----------------
+function aiMove(){
+    let idx=getAIMove();
     if(idx!==null){
         board[idx]='O';
         playSound('move-sound');
-        animateCell(idx);
+        flashAIMove(idx);
         updateBoard();
-        if(checkWinner('O')){ 
-            playSound('win-sound'); 
-            score['O']++; updateScore(); 
-            showPopup(`AI Wins!`); 
-            setTimeout(resetGame,1500); 
-            return; 
+        if(checkWinner('O')){
+            playSound('win-sound');
+            score['O']++; updateScore();
+            showPopup(`AI Wins!`);
+            startConfetti(); setTimeout(resetGame,2000);
+            return;
         }
         currentPlayer='X';
         document.getElementById('turn').textContent='Turn: Player 1 (X)';
     }
 }
 
+// ----------------- Animations -----------------
 function animateCell(i){
     const cell = boardDiv.children[i];
     cell.style.transform='scale(1.2)';
     setTimeout(()=>cell.style.transform='scale(1)',200);
 }
 
+function flashAIMove(i){
+    const cell = boardDiv.children[i];
+    let flashes=0;
+    const flashInterval=setInterval(()=>{
+        cell.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+        flashes++;
+        if(flashes>5){ clearInterval(flashInterval); cell.style.backgroundColor=colors[i]; }
+    },100);
+}
+
+// ----------------- AI Logic -----------------
 function getAIMove(){
-    const empty = board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
+    const empty=board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
     if(empty.length===0) return null;
     if(aiLevel==='low') return empty[Math.floor(Math.random()*empty.length)];
     if(aiLevel==='medium') return Math.random()<0.5 ? empty[Math.floor(Math.random()*empty.length)] : minimax('O',true).index;
@@ -192,14 +195,14 @@ function getAIMove(){
 
 function minimax(player,isRoot=false){
     const opponent = player==='X'?'O':'X';
-    const empty = board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
+    const empty=board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
     if(checkWinner('O')) return {score:1};
     if(checkWinner('X')) return {score:-1};
     if(empty.length===0) return {score:0};
-    let moves = [];
+    let moves=[];
     for(let i of empty){
         board[i]=player;
-        const result = minimax(opponent);
+        const result=minimax(opponent);
         moves.push({index:i,score:result.score});
         board[i]='';
     }
@@ -212,29 +215,17 @@ function minimax(player,isRoot=false){
     }
 }
 
+// ----------------- Utility -----------------
 function checkWinner(player){
     const winCond=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     return winCond.some(([a,b,c])=>board[a]===player && board[b]===player && board[c]===player);
 }
 
 function updateBoard(){ renderBoard(); }
-
-function resetGame(){
-    board = Array(9).fill('');
-    currentPlayer='X';
-    updateBoard();
-    document.getElementById('turn').textContent='Turn: Player 1 (X)';
-}
-
-function switchTheme(){
-    darkMode = !darkMode;
-    document.body.style.backgroundColor=darkMode?'black':'white';
-    document.body.style.color=darkMode?'white':'black';
-}
-
+function resetGame(){ board=Array(9).fill(''); currentPlayer='X'; updateBoard(); document.getElementById('turn').textContent='Turn: Player 1 (X)'; }
+function switchTheme(){ darkMode=!darkMode; document.body.style.backgroundColor=darkMode?'black':'white'; document.body.style.color=darkMode?'white':'black'; }
 function setMode(mode){ vsAI = mode==='PVC'; resetGame(); }
-function setLevel(level){ aiLevel = level; }
-
+function setLevel(level){ aiLevel=level; }
 function showHint(){
     if(vsAI){
         const hint = minimax('X',true).index;
@@ -244,11 +235,61 @@ function showHint(){
         setTimeout(()=>cell.style.backgroundColor=original,500);
     } else alert('Hint available only in PVC mode');
 }
+function updateScore(){ scoreDiv.textContent=`Player 1: ${score.X} | Player 2 / AI: ${score.O}`; }
 
-function updateScore(){
-    scoreDiv.textContent = `Player 1: ${score.X} | Player 2 / AI: ${score.O}`;
+// ----------------- Confetti -----------------
+const confettiCanvas=document.getElementById('confetti-canvas');
+const ctx=confettiCanvas.getContext('2d');
+let confettiParticles=[];
+
+function resizeCanvas(){ confettiCanvas.width=window.innerWidth; confettiCanvas.height=window.innerHeight; }
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+
+function createConfetti(count=150){
+    confettiParticles=[];
+    for(let i=0;i<count;i++){
+        confettiParticles.push({
+            x: Math.random()*window.innerWidth,
+            y: Math.random()*window.innerHeight - window.innerHeight,
+            r: Math.random()*6 + 4,
+            d: Math.random()*20 + 10,
+            color: `hsl(${Math.random()*360},100%,50%)`,
+            tilt: Math.random()*10 - 10,
+            tiltAngleIncrement: Math.random()*0.07 + 0.05,
+            tiltAngle: 0
+        });
+    }
 }
 
+function drawConfetti(){
+    ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    confettiParticles.forEach(p=>{
+        ctx.beginPath();
+        ctx.lineWidth=p.r/2;
+        ctx.strokeStyle=p.color;
+        ctx.moveTo(p.x+p.tilt+p.r/4,p.y);
+        ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/4);
+        ctx.stroke();
+    });
+    updateConfetti();
+}
+
+function updateConfetti(){
+    confettiParticles.forEach(p=>{
+        p.tiltAngle += p.tiltAngleIncrement;
+        p.y += (Math.cos(p.d)+3+p.r/2)/2;
+        p.tilt = Math.sin(p.tiltAngle)*15;
+        if(p.y>window.innerHeight) p.y=-10;
+    });
+    requestAnimationFrame(drawConfetti);
+}
+
+function startConfetti(duration=2000){
+    createConfetti();
+    drawConfetti();
+    setTimeout(()=> confettiParticles=[],duration);
+}
 </script>
 
 </body>
