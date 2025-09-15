@@ -77,6 +77,27 @@ button, select { margin: 5px; padding: 10px; font-size: 16px; cursor: pointer; b
 
 <audio id="move-sound" src="move.mp3"></audio>
 <audio id="win-sound" src="win.mp3"></audio>
+<!-- Footer -->
+<footer style="
+    margin-top: 20px; 
+    font-size: 18px; 
+    font-weight: bold;
+    color: #fff; 
+    text-shadow: 0 0 5px #fff, 0 0 10px #ff00ff, 0 0 20px #00ffff;
+    animation: glow 2s infinite alternate;
+">
+    Developed by VETRIVEL M
+</footer>
+
+<style>
+@keyframes glow {
+    0% { text-shadow: 0 0 5px #ff0000, 0 0 10px #ff6600, 0 0 20px #ffcc00; color: #ff0000; }
+    25% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #6600ff, 0 0 20px #00ccff; color: #ff00ff; }
+    50% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00cc66, 0 0 20px #66ffcc; color: #00ff00; }
+    75% { text-shadow: 0 0 5px #00ffff, 0 0 10px #0066ff, 0 0 20px #cc00ff; color: #00ffff; }
+    100% { text-shadow: 0 0 5px #ff0000, 0 0 10px #ff6600, 0 0 20px #ffcc00; color: #ff0000; }
+}
+</style>
 
 <script>
 // ----------------- Game Variables -----------------
