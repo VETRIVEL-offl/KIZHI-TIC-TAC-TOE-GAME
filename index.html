@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIZHI Tic Tac Toe</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: black;
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    transition: background 0.3s, color 0.3s;
+  }
+  h1 { margin: 20px 0; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-gap: 10px;
+    justify-content: center;
+    margin: 20px auto;
+  }
+  .cell {
+    width: 100px;
+    height: 100px;
+    font-size: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.3s;
+    border-radius: 10px;
+  }
+  button, select {
+    margin: 5px;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>KIZHI Tic Tac Toe</h1>
+<div id="board"></div>
+<div>
+  <button onclick="resetGame()">Reset</button>
+  <button onclick="switchTheme()">Switch Theme</button>
+  <button onclick="showHint()">Hint</button>
+  <select id="mode" onchange="setMode(this.value)">
+    <option value="PVC">Player vs AI</option>
+    <option value="PVP">Player vs Player</option>
+  </select>
+  <select id="level" onchange="setLevel(this.value)">
+    <option value="low">Low</option>
+    <option value="medium" selected>Medium</option>
+    <option value="tough">Tough</option>
+  </select>
+</div>
+<h2 id="turn">Turn: Player 1 (X)</h2>
+
+<!-- Sound effects -->
+<audio id="move-sound" src="move.mp3"></audio>
+<audio id="win-sound" src="win.mp3"></audio>
+
+<script>
+let board = Array(9).fill('');
+let currentPlayer = 'X';
+let vsAI = true;
+let aiLevel = 'medium';
+let darkMode = true;
+
+const colors = ['#FF6F61','#6B5B95','#88B04B','#F7CAC9','#92A8D1','#955251','#B565A7','#009B77','#DD4124'];
+const boardDiv = document.getElementById('board');
+
+function renderBoard() {
+  boardDiv.innerHTML = '';
+  board.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'cell';
+    div.style.backgroundColor = colors[i];
+    div.textContent = cell;
+
+    // Hover animation
+    div.onmouseenter = () => div.style.backgroundColor = '#FFFF00';
+    div.onmouseleave = () => div.style.backgroundColor = colors[i];
+
+    div.onclick = () => playerMove(i);
+    boardDiv.appendChild(div);
+  });
+}
+renderBoard();
+
+function playSound(id) {
+  const audio = document.getElementById(id);
+  audio.currentTime = 0;
+  audio.play();
+}
+
+function playerMove(i) {
+  if(board[i] !== '') return;
+  board[i] = currentPlayer;
+  playSound('move-sound');
+  updateBoard();
+  if(checkWinner(currentPlayer)) { playSound('win-sound'); alert(`${currentPlayer} wins!`); resetGame(); return; }
+  if(!board.includes('')) { alert('Draw!'); resetGame(); return; }
+  if(vsAI && currentPlayer === 'X') {
+    currentPlayer = 'O';
+    document.getElementById('turn').textContent = 'Turn: AI (O)';
+    setTimeout(aiMove, 500);
+  } else {
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    document.getElementById('turn').textContent = `Turn: ${currentPlayer === 'X' ? 'Player 1 (X)' : 'Player 2 (O)'}`;
+  }
+}
+
+function aiMove() {
+  let idx = getAIMove();
+  if(idx !== null) {
+    board[idx] = 'O';
+    playSound('move-sound');
+    updateBoard();
+    if(checkWinner('O')) { playSound('win-sound'); alert('AI wins!'); resetGame(); return; }
+    currentPlayer = 'X';
+    document.getElementById('turn').textContent = 'Turn: Player 1 (X)';
+  }
+}
+
+function getAIMove() {
+  const empty = board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
+  if(empty.length===0) return null;
+  if(aiLevel==='low') return empty[Math.floor(Math.random()*empty.length)];
+  if(aiLevel==='medium') return Math.random()<0.5 ? empty[Math.floor(Math.random()*empty.length)] : minimax('O').index;
+  return minimax('O').index;
+}
+
+function minimax(player) {
+  const opponent = player==='X'?'O':'X';
+  const empty = board.map((v,i)=>v===''?i:null).filter(v=>v!==null);
+  if(checkWinner('O')) return {score: 1};
+  if(checkWinner('X')) return {score: -1};
+  if(empty.length===0) return {score:0};
+  let moves = [];
+  empty.forEach(i=>{
+    board[i] = player;
+    const result = minimax(opponent);
+    moves.push({index:i, score: result.score});
+    board[i] = '';
+  });
+  return player==='O'? moves.reduce((a,b)=>a.score>b.score?a:b) : moves.reduce((a,b)=>a.score<b.score?a:b);
+}
+
+function checkWinner(player) {
+  const winCond = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  return winCond.some(([a,b,c])=>board[a]===player && board[b]===player && board[c]===player);
+}
+
+function updateBoard() { renderBoard(); }
+
+function resetGame() {
+  board = Array(9).fill('');
+  currentPlayer = 'X';
+  updateBoard();
+  document.getElementById('turn').textContent = 'Turn: Player 1 (X)';
+}
+
+function switchTheme() {
+  darkMode = !darkMode;
+  document.body.style.backgroundColor = darkMode?'black':'white';
+  document.body.style.color = darkMode?'white':'black';
+}
+
+function setMode(mode) { vsAI = mode==='PVC'; resetGame(); }
+function setLevel(level) { aiLevel = level; }
+
+function showHint() {
+  if(vsAI) {
+    const hint = minimax('X').index;
+    alert(`Best move: ${hint+1}`);
+    // Optional: briefly highlight hint
+    const cell = boardDiv.children[hint];
+    const original = cell.style.backgroundColor;
+    cell.style.backgroundColor = '#00FF00';
+    setTimeout(()=>cell.style.backgroundColor=original, 500);
+  } else { alert('Hint available only in PVC mode'); }
+}
+</script>
+
+</body>
+</html>
